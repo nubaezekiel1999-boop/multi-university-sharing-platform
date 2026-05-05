@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Dashboard Pro</title>
+
+<style>
+body{
+    margin:0;
+    font-family:Arial;
+    min-height:100vh;
+
+    background:
+    linear-gradient(135deg, rgba(31,161,46,0.6), rgba(0,0,0,0.7), rgba(252,209,22,0.5), rgba(0,163,221,0.6)),
+    url("https://images.unsplash.com/photo-1524995997946-a1c2e315a42f");
+
+    background-size:cover;
+    background-position:center;
+    color:white;
+}
+
+/* NAV */
+.nav{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:15px;
+    background:rgba(0,0,0,0.6);
+    backdrop-filter:blur(10px);
+}
+
+/* TITLE */
+.nav h3{
+    margin:0;
+    font-size:20px;
+    font-weight:bold;
+
+    background:linear-gradient(90deg,#1fa12e,#fcd116,#00a3dd);
+    -webkit-background-clip:text;
+    -webkit-text-fill-color:transparent;
+}
+
+/* GRID */
+.container{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(250px,1fr));
+    gap:15px;
+    padding:20px;
+}
+
+/* CARDS */
+.card{
+    background:rgba(255,255,255,0.12);
+    backdrop-filter:blur(15px);
+    padding:20px;
+    border-radius:20px;
+    transition:0.3s;
+}
+
+.card:hover{
+    transform:translateY(-5px);
+}
+
+/* BUTTON */
+button{
+    padding:10px 15px;
+    border:none;
+    border-radius:25px;
+    cursor:pointer;
+    background:#1fa12e;
+    color:white;
+    font-weight:bold;
+}
+
+button:hover{
+    background:#157a22;
+}
+
+/* NUMBERS */
+.stat{
+    font-size:22px;
+    font-weight:bold;
+}
+</style>
+</head>
+
+<body>
+
+<div class="nav">
+    <h3>Course Platform Dashboard</h3>
+    <button onclick="logout()">Logout</button>
+</div>
+
+<div class="container">
+
+    <div class="card">
+        <h2>📚 Welcome 👋</h2>
+        <p id="userInfo"></p>
+    </div>
+
+    <div class="card">
+        <h3>📁 Upload Files</h3>
+        <button onclick="goUpload()">Go Upload</button>
+    </div>
+
+    <div class="card">
+        <h3>📂 View Files</h3>
+        <button onclick="goFiles()">Go Files</button>
+    </div>
+
+    <div class="card">
+        <h3>👤 Total Users</h3>
+        <div class="stat" id="users">0</div>
+    </div>
+
+    <div class="card">
+        <h3>📁 Total Files</h3>
+        <div class="stat" id="files">0</div>
+    </div>
+
+    <div class="card">
+        <h3>📚 My Files</h3>
+        <div class="stat" id="myFiles">0</div>
+    </div>
+
+</div>
+
+<script>
+
+const API = "http://localhost:3000";
+
+/* 🔒 SAFE AUTH CHECK */
+const user = JSON.parse(localStorage.getItem("user") || "null");
+const token = localStorage.getItem("token");
+
+if(!user || !token){
+    window.location.replace("login.html");
+}
+
+/* INIT */
+window.onload = function(){
+
+    document.getElementById("userInfo").innerText =
+        "Logged in as: " + user.email;
+
+    // USERS
+    fetch(API + "/stats/users")
+    .then(res => res.json())
+    .then(data => {
+        document.getElementById("users").innerText = data.totalUsers || 0;
+    })
+    .catch(()=>{});
+
+    // FILES
+    fetch(API + "/stats/files")
+    .then(res => res.json())
+    .then(data => {
+        document.getElementById("files").innerText = data.totalFiles || 0;
+    })
+    .catch(()=>{});
+
+    // MY FILES
+    fetch(API + "/stats/user/" + user.id)
+    .then(res => res.json())
+    .then(data => {
+        document.getElementById("myFiles").innerText = data.myFiles || 0;
+    })
+    .catch(()=>{});
+};
+
+/* NAVIGATION */
+function goUpload(){
+    window.location.replace("upload.html");
+}
+
+function goFiles(){
+    window.location.replace("files.html");
+}
+
+/* LOGOUT */
+function logout(){
+    localStorage.removeItem("user");
+    localStorage.removeItem("token");
+    window.location.replace("login.html");
+}
+
+</script>
+
+</body>
+</html>

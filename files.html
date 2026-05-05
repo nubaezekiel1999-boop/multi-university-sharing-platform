@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Files Pro</title>
+
+<style>
+body{
+    margin:0;
+    font-family:Arial;
+    min-height:100vh;
+
+    background:
+    linear-gradient(135deg, rgba(31,161,46,0.7), rgba(0,0,0,0.7), rgba(252,209,22,0.6), rgba(0,163,221,0.7)),
+    url("https://images.unsplash.com/photo-1524995997946-a1c2e315a42f");
+
+    background-size:cover;
+    background-position:center;
+    color:white;
+}
+
+.nav{
+    padding:15px;
+    background:rgba(0,0,0,0.6);
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    flex-wrap:wrap;
+    gap:10px;
+    backdrop-filter:blur(10px);
+}
+
+.search-box, .filter-box{
+    width:170px;
+    padding:8px;
+    border-radius:20px;
+    border:none;
+    outline:none;
+}
+
+.filters{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    align-items:center;
+}
+
+.card{
+    background:rgba(255,255,255,0.12);
+    padding:15px;
+    margin:15px;
+    border-radius:20px;
+    backdrop-filter:blur(10px);
+    transition:0.3s;
+}
+
+.card:hover{
+    transform:translateY(-5px);
+}
+
+button{
+    padding:8px 12px;
+    border:none;
+    border-radius:20px;
+    background:#1fa12e;
+    color:white;
+    cursor:pointer;
+}
+
+button:hover{
+    background:#157a22;
+}
+
+.empty{
+    margin:20px;
+    font-size:18px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="nav">
+    <h3>📂 Course Materials</h3>
+
+    <div class="filters">
+
+        <input id="search" class="search-box" placeholder="Search..." onkeyup="searchFiles()">
+
+        <input id="uni" class="filter-box" placeholder="University">
+
+        <input id="course" class="filter-box" placeholder="Course">
+
+        <button onclick="applyFilter()">Filter</button>
+        <button onclick="loadFiles()">Reset</button>
+
+    </div>
+
+    <button onclick="goDashboard()">Dashboard</button>
+</div>
+
+<div id="fileList"></div>
+
+<script>
+
+const API = "http://localhost:3000";
+
+/* 🔒 SAFE AUTH GUARD */
+const user = JSON.parse(localStorage.getItem("user") || "null");
+const token = localStorage.getItem("token");
+
+if(!user || !token){
+    window.location.replace("login.html");
+}
+
+/* ================= LOAD FILES ================= */
+function loadFiles(){
+    fetch(API + "/files", {
+        headers: {
+            "Authorization": "Bearer " + token
+        }
+    })
+    .then(res => {
+        if(!res.ok) throw new Error("Failed to load files");
+        return res.json();
+    })
+    .then(showFiles)
+    .catch(showError);
+}
+
+/* ================= SEARCH - FIXED ================= */
+function searchFiles(){
+
+    const q = document.getElementById("search").value.trim();
+
+    if(q === ""){
+        loadFiles();
+        return;
+    }
+
+    // ✅ FIXED: Removed /:id from URL
+    fetch(API + "/search?q=" + encodeURIComponent(q), {
+        headers: {
+            "Authorization": "Bearer " + token
+        }
+    })
+    .then(res => {
+        if(!res.ok) throw new Error("Search failed");
+        return res.json();
+    })
+    .then(showFiles)
+    .catch(showError);
+}
+
+/* ================= FILTER ================= */
+function applyFilter(){
+
+    const university = document.getElementById("uni").value;
+    const course = document.getElementById("course").value;
+
+    let url = API + "/filter?";
+    let params = [];
+
+    if(university) params.push("university=" + encodeURIComponent(university));
+    if(course) params.push("course=" + encodeURIComponent(course));
+
+    url += params.join("&");
+
+    fetch(url, {
+        headers: {
+            "Authorization": "Bearer " + token
+        }
+    })
+    .then(res => {
+        if(!res.ok) throw new Error("Filter failed");
+        return res.json();
+    })
+    .then(showFiles)
+    .catch(showError);
+}
+
+/* ================= SHOW FILES ================= */
+function showFiles(data){
+
+    let html = "";
+
+    if(!data || data.length === 0){
+        html = "<p class='empty'>📭 No files found</p>";
+    } else {
+
+        data.forEach(file => {
+
+            html += `
+            <div class="card">
+                <h3>📄 ${escapeHtml(file.original_name)}</h3>
+                <p>📚 Course: ${escapeHtml(file.course || 'N/A')}</p>
+                <p>🏫 University: ${escapeHtml(file.university || 'N/A')}</p>
+                <a href="${API}/uploads/${file.filename}" download>
+                    <button>⬇ Download</button>
+                </a>
+            </div>
+            `;
+        });
+    }
+
+    document.getElementById("fileList").innerHTML = html;
+}
+
+/* ================= HELPER: Escape HTML ================= */
+function escapeHtml(str){
+    if(!str) return '';
+    return str.replace(/[&<>]/g, function(m){
+        if(m === '&') return '&amp;';
+        if(m === '<') return '&lt;';
+        if(m === '>') return '&gt;';
+        return m;
+    });
+}
+
+/* ================= ERROR ================= */
+function showError(err){
+    console.error("Error:", err);
+    document.getElementById("fileList").innerHTML =
+    "<p class='empty'>❌ Error loading files. Make sure server is running.</p>";
+}
+
+/* ================= NAV ================= */
+function goDashboard(){
+    window.location.replace("dashboard.html");
+}
+
+/* START */
+loadFiles();
+
+</script>
+
+</body>
+</html>

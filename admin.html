@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Admin File</title>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<style>
+body{
+    margin:0;
+    font-family:Arial;
+    min-height:100vh;
+    background:linear-gradient(135deg,#1fa12e,#000,#fcd116,#00a3dd);
+    color:white;
+}
+
+.nav{
+    display:flex;
+    justify-content:space-between;
+    padding:15px;
+    background:rgba(0,0,0,0.6);
+    align-items:center;
+}
+
+/* 🔔 NOTIFICATION */
+.notif-box{
+    position:relative;
+    cursor:pointer;
+    font-size:22px;
+}
+
+.notif-count{
+    position:absolute;
+    top:-8px;
+    right:-10px;
+    background:red;
+    color:white;
+    font-size:12px;
+    padding:2px 6px;
+    border-radius:50%;
+}
+
+.notif-dropdown{
+    position:absolute;
+    right:0;
+    top:40px;
+    width:280px;
+    background:rgba(0,0,0,0.9);
+    border-radius:10px;
+    display:none;
+    max-height:300px;
+    overflow-y:auto;
+}
+
+.notif-item{
+    padding:10px;
+    border-bottom:1px solid rgba(255,255,255,0.1);
+}
+
+.container{
+    padding:20px;
+    display:flex;
+    flex-direction:column;
+    gap:15px;
+}
+
+.top-row{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
+    gap:15px;
+}
+
+.card{
+    background:rgba(255,255,255,0.15);
+    padding:20px;
+    border-radius:20px;
+}
+
+input{
+    width:100%;
+    padding:10px;
+    margin-top:8px;
+    border-radius:10px;
+    border:none;
+}
+
+button{
+    padding:8px 12px;
+    border:none;
+    border-radius:20px;
+    background:red;
+    color:white;
+    cursor:pointer;
+    margin-top:10px;
+}
+
+.files-list{
+    display:flex;
+    gap:10px;
+    overflow-x:auto;
+}
+
+.file-card{
+    min-width:200px;
+    background:rgba(0,0,0,0.3);
+    padding:15px;
+    border-radius:10px;
+}
+
+canvas{
+    background:rgba(255,255,255,0.1);
+    border-radius:10px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="nav">
+    <h3>🔥 Admin File</h3>
+
+    <div style="display:flex;align-items:center;gap:15px;">
+
+        <!-- 🔔 -->
+        <div class="notif-box" onclick="toggleNotif()">
+            🔔
+            <span id="notifCount" class="notif-count">0</span>
+
+            <div class="notif-dropdown" id="notifDropdown">
+                <div id="notifList"></div>
+            </div>
+        </div>
+
+        <button onclick="logout()">Logout</button>
+    </div>
+</div>
+
+<div class="container">
+
+    <div class="top-row">
+        <div class="card">
+            <h3>📊 Analytics</h3>
+            <canvas id="barChart"></canvas>
+        </div>
+
+        <div class="card">
+            <h3>👤 Users</h3>
+            <h2 id="users">0</h2>
+        </div>
+
+        <div class="card">
+            <h3>📁 Files</h3>
+            <h2 id="files">0</h2>
+        </div>
+    </div>
+
+    <div class="card">
+        <h3>👑 Create Admin</h3>
+        <input id="adminName" placeholder="Name">
+        <input id="adminEmail" placeholder="Email">
+        <input id="adminUni" placeholder="University">
+        <input id="adminPass" type="password" placeholder="Password">
+        <button onclick="createAdmin()">Create Admin</button>
+        <p id="msg"></p>
+    </div>
+
+    <div class="card">
+        <h3>📁 All Files</h3>
+        <div class="files-list" id="fileList"></div>
+    </div>
+
+</div>
+
+<script>
+
+const API = "http://localhost:3000";
+
+let chart;
+
+/* 🔔 NOTIFICATIONS */
+function toggleNotif(){
+    const box = document.getElementById("notifDropdown");
+    box.style.display = box.style.display === "block" ? "none" : "block";
+}
+
+function loadNotifications(){
+    fetch(API+"/notifications")
+    .then(r=>r.json())
+    .then(data=>{
+        notifCount.innerText = data.length;
+
+        notifList.innerHTML = data.slice().reverse().map(n=>
+            `<div class="notif-item">${n.message}</div>`
+        ).join("");
+    });
+}
+
+/* STATS */
+function loadStats(){
+    fetch(API+"/stats/users").then(r=>r.json()).then(d=>{
+        users.innerText = d.totalUsers;
+    });
+
+    fetch(API+"/stats/files").then(r=>r.json()).then(d=>{
+        files.innerText = d.totalFiles;
+    });
+}
+
+/* CHART */
+function loadChart(){
+    Promise.all([
+        fetch(API+"/stats/users").then(r=>r.json()),
+        fetch(API+"/stats/files").then(r=>r.json())
+    ]).then(([u,f])=>{
+
+        if(chart) chart.destroy();
+
+        chart = new Chart(barChart, {
+            type:"bar",
+            data:{
+                labels:["Users","Files"],
+                datasets:[{
+                    data:[u.totalUsers,f.totalFiles]
+                }]
+            }
+        });
+    });
+}
+
+/* FILES */
+function loadFiles(){
+    fetch(API+"/files")
+    .then(r=>r.json())
+    .then(data=>{
+        fileList.innerHTML = data.map(f=>`
+        <div class="file-card">
+        📄 ${f.original_name}<br>
+        📚 ${f.course}<br>
+        🏫 ${f.university}
+        <br><br>
+        <button onclick="deleteFile(${f.id})">🗑️ Delete</button>
+        </div>`).join("");
+    });
+}
+
+/* DELETE */
+function deleteFile(id){
+    Swal.fire({
+        title:"Delete file?",
+        icon:"warning",
+        showCancelButton:true
+    }).then(res=>{
+        if(res.isConfirmed){
+            fetch(API+"/admin/file/"+id,{
+                method:"DELETE",
+                headers:{
+                    "Authorization":"Bearer "+localStorage.getItem("token")
+                }
+            })
+            .then(r=>r.json())
+            .then(()=>{
+                Swal.fire("Deleted","Success","success");
+                loadFiles();
+            })
+            .catch(()=>{
+                Swal.fire("Error","Server error","error");
+            });
+        }
+    });
+}
+
+/* CREATE ADMIN */
+function createAdmin(){
+    fetch(API+"/admin/create",{
+        method:"POST",
+        headers:{
+            "Content-Type":"application/json",
+            "Authorization":"Bearer "+localStorage.getItem("token")
+        },
+        body:JSON.stringify({
+            name:adminName.value,
+            email:adminEmail.value,
+            university:adminUni.value,
+            password:adminPass.value
+        })
+    })
+    .then(r=>r.json())
+    .then(d=>{
+        msg.innerText = d.message;
+    });
+}
+
+/* AUTO REFRESH */
+setInterval(()=>{
+    loadNotifications();
+    loadStats();
+    loadChart();
+},5000);
+
+/* INIT */
+loadNotifications();
+loadStats();
+loadFiles();
+loadChart();
+
+function logout(){
+    localStorage.clear();
+    window.location.href="login.html";
+}
+
+</script>
+
+</body>
+</html>

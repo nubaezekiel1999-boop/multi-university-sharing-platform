@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Register</title>
+
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<style>
+body{
+    margin:0;
+    font-family: Arial;
+    height:100vh;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+
+    background: linear-gradient(
+        135deg,
+        green 0%,
+        green 25%,
+        black 25%,
+        black 40%,
+        yellow 40%,
+        yellow 55%,
+        blue 55%,
+        blue 100%
+    );
+}
+
+.box{
+    background:white;
+    padding:25px;
+    width:340px;
+    border-radius:10px;
+    box-shadow:0 0 10px rgba(0,0,0,0.3);
+}
+
+input{
+    width:100%;
+    padding:10px;
+    margin-top:10px;
+    border:1px solid #ccc;
+    border-radius:5px;
+}
+
+button{
+    width:100%;
+    padding:10px;
+    margin-top:10px;
+    background:#0066ff;
+    color:white;
+    border:none;
+    cursor:pointer;
+    border-radius:5px;
+}
+
+button:hover{
+    background:#0044aa;
+}
+
+#msg{
+    margin-top:10px;
+    text-align:center;
+    color:red;
+}
+</style>
+</head>
+
+<body>
+
+<div class="box">
+    <h2>Register</h2>
+
+    <input id="name" placeholder="Full Name">
+    <input id="email" placeholder="Email">
+    <input id="university" placeholder="University">
+    <input id="password" type="password" placeholder="Password">
+
+    <button onclick="register()">Register</button>
+
+    <p>Already have account? <a href="login.html">Login</a></p>
+
+    <p id="msg"></p>
+</div>
+
+<script>
+
+const API = "http://localhost:3000";
+
+function register(){
+
+    const name = nameInput.value.trim();
+    const email = emailInput.value.trim();
+    const university = universityInput.value.trim();
+    const password = passwordInput.value.trim();
+
+    if(!name || !email || !university || !password){
+        msg.innerText = "⚠️ Please fill all fields";
+        return;
+    }
+
+    fetch(API + "/register", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            name,
+            email,
+            university,
+            password
+        })
+    })
+    .then(res => res.json())
+    .then(data => {
+
+        msg.innerText = data.message;
+
+        if(data.message === "User registered successfully"){
+
+            Swal.fire({
+                icon: "success",
+                title: "Success",
+                text: "Registered successfully"
+            });
+
+            // clear inputs
+            nameInput.value = "";
+            emailInput.value = "";
+            universityInput.value = "";
+            passwordInput.value = "";
+
+            // ✅ SAFE REDIRECT (no loop risk)
+            setTimeout(()=>{
+                window.location.replace("login.html");
+            },1000);
+        }
+    })
+    .catch(()=>{
+        msg.innerText = "❌ Server error";
+    });
+}
+
+/* INPUT REFERENCES */
+const nameInput = document.getElementById("name");
+const emailInput = document.getElementById("email");
+const universityInput = document.getElementById("university");
+const passwordInput = document.getElementById("password");
+const msg = document.getElementById("msg");
+
+</script>
+
+</body>
+</html>
